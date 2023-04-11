@@ -1,8 +1,13 @@
+require('dotenv').config();
 const Sequelize = require('sequelize');
 const fs = require('fs');
 const path = require('path');
 const basename = path.basename(__filename);
-const sequelize = new Sequelize(process.env.DATABASE_NAME, process.env.ADMIN_USERNAME, process.env.ADMIN_PASSWORD, { host: process.env.HOST, dialect: process.env.DIALECT });
+const sequelize = new Sequelize(process.env.DATABASE_NAME, process.env.ADMIN_USERNAME, process.env.ADMIN_PASSWORD, {
+  host: process.env.HOST,
+  dialect: process.env.DIALECT
+});
+
 const db = {};
 db.sequelize = sequelize;
 fs.readdirSync(__dirname)
