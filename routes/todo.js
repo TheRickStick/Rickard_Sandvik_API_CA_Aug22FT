@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const { Todo, Category } = require('../models');
 const { auth } = require('./auth');
-const { success, fail } = require('../utils/response');
+//const { success, fail } = require('../utils/response');
 
 // GET all Todo items
 router.get('/', auth, async (req, res) => {
