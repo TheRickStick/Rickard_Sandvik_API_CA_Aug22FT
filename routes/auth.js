@@ -10,7 +10,7 @@ var bodyParser = require('body-parser')
 var jsonParser = bodyParser.json()
 router.use(jsend.middleware);
 
-router.post("/signup", async (req, res, next) => {
+router.post("/signup", jsonParser, async (req, res, next) => {
     const { name, email, password } = req.body;
     if (name == null) {
       return res.jsend.fail({"name": "Name is required."});
@@ -27,9 +27,9 @@ router.post("/signup", async (req, res, next) => {
     }
     var salt = crypto.randomBytes(16);
     crypto.pbkdf2(password, salt, 310000, 32, 'sha256', function(err, hashedPassword) {
-      if (err) { return next(err); }
-      userService.create(name, email, hashedPassword, salt)
-      res.jsend.success({"result": "You created an account."});
+        if (err) { return next(err); }
+        userService.create(name, email, hashedPassword, salt)
+        res.jsend.success({"result": "You created an account."});
     });
 });
 
@@ -45,15 +45,15 @@ router.post("/login", jsonParser, async (req, res, next) => {
         if(data === null) {
             return res.jsend.fail({"result": "Incorrect email or password"});
         }
-        crypto.pbkdf2(password, data.Salt, 310000, 32, 'sha256', function(err, hashedPassword) {
-          if (err) { return cb(err); }
-          if (!crypto.timingSafeEqual(data.EncryptedPassword, hashedPassword)) {
+        crypto.pbkdf2(password, data.salt, 310000, 32, 'sha256', function(err, hashedPassword) {
+          if (err) { return (err); }
+          if (!crypto.timingSafeEqual(data.encryptedPassword, hashedPassword)) {
               return res.jsend.fail({"result": "Incorrect email or password"});
           }
           let token;
           try {
             token = jwt.sign(
-              { id: data.id, email: data.Email },
+              { id: data.id, email: data.email },
               process.env.TOKEN_SECRET,
               { expiresIn: "1h" }
             );

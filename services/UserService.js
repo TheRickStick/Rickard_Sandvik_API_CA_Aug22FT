@@ -12,10 +12,10 @@ class UserService {
 
     async create(name, email, encryptedPassword, salt) {
         return this.User.create({
-            Name: name,
-            Email: email,
-            EncryptedPassword: encryptedPassword,
-            Salt: salt
+            name: name,
+            email: email,
+            encryptedPassword: encryptedPassword,
+            salt: salt
         })
     }
 }
