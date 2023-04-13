@@ -1,4 +1,5 @@
 var express = require('express');
+var jwt = require('jsonwebtoken')
 var jsend = require('jsend');
 var router = express.Router();
 var db = require("../models");
