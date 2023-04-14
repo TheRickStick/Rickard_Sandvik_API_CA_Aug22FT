@@ -7,7 +7,7 @@ var logger = require('morgan');
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var authRouter = require('./routes/auth');
-var todoRouter = require('./routes/todo')
+var todoRouter = require('./routes/todo');
 require('dotenv').config();
 var db = require('./models');
 db.sequelize.sync({ force: false });

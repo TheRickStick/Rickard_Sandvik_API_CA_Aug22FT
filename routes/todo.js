@@ -1,78 +1,84 @@
-const router = require('express').Router();
+var express = require('express');
+var jsend = require('jsend');
+var router = express.Router();
 const { Todo, Category } = require('../models');
-const { auth } = require('./auth');
-//const { success, fail } = require('../utils/response');
+var jwt = require('jsonwebtoken')
 
-// GET all Todo items
-router.get('/', auth, async (req, res) => {
+router.use(jsend.middleware);
+
+const { Op } = require('sequelize');
+
+
+// middleware to verify token
+function verifyToken(req, res, next) {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ message: 'Access denied. No token provided.' });
+  }
   try {
-    const todos = await Todo.findAll({
-      where: { userId: req.user.id },
-      include: { model: Category, attributes: ['name'] },
-    });
-    res.json(success(todos));
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decodedToken;
+    next();
   } catch (err) {
     console.error(err);
-    res.status(500).json(fail('Error retrieving Todo items'));
+    res.status(400).json({ message: 'Invalid svin.' });
+  }
+}
+
+// GET all Todo items
+router.get('/', verifyToken, async (req, res) => {
+  try {
+    const todos = await todoService.getAllTodosByUserId(req.user.id);
+    res.json(todos);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error retrieving Todo items' });
   }
 });
 
 // POST a new Todo item
-router.post('/', auth, async (req, res) => {
+router.post('/', verifyToken, async (req, res) => {
   try {
-    const todo = await Todo.create({
-      ...req.body,
-      userId: req.user.id,
-    });
-    res.json(success(todo));
+    const todo = await todoService.createTodoByUserId(req.body, req.user.id);
+    res.json(todo);
   } catch (err) {
     console.error(err);
-    res.status(500).json(fail('Error creating Todo item'));
+    res.status(500).json({ message: 'Error creating Todo item' });
   }
 });
 
 // PUT (update) an existing Todo item by ID or name
-router.put('/:idOrName', auth, async (req, res) => {
+router.put('/:idOrName', verifyToken, async (req, res) => {
   try {
-    const todo = await Todo.findOne({
-      where: {
-        userId: req.user.id,
-        [Op.or]: [{ id: req.params.idOrName }, { name: req.params.idOrName }],
-      },
-    });
-
-    if (!todo) {
-      res.status(404).json(fail(`Todo item with ID or name '${req.params.idOrName}' not found`));
-    } else {
-      const updatedTodo = await todo.update({ ...req.body });
-      res.json(success(updatedTodo));
+    const { id, name, newName } = req.body;
+    if (!id && !name && !newName) {
+      return res.status(400).json({ message: 'Provide the id, name or the newName' });
     }
+    const todo = await todoService.getTodoByIdOrNameAndUserId(req.params.idOrName, req.user.id);
+    if (!todo) {
+      return res.status(404).json({ message: `Todo item with ID or name '${req.params.idOrName}' not found` });
+    }
+    const updatedTodo = await todoService.updateTodoByIdOrNameAndUserId(req.params.idOrName, req.body, req.user.id);
+    res.json(updatedTodo);
   } catch (err) {
     console.error(err);
-    res.status(500).json(fail('Error updating Todo item'));
+    res.status(500).json({ message: 'Error updating Todo item' });
   }
 });
 
 // DELETE an existing Todo item by ID or name
-router.delete('/:idOrName', auth, async (req, res) => {
+router.delete('/:idOrName', verifyToken, async (req, res) => {
   try {
-    const numAffectedRows = await Todo.destroy({
-      where: {
-        userId: req.user.id,
-        [Op.or]: [{ id: req.params.idOrName }, { name: req.params.idOrName }],
-      },
-    });
-
+    const numAffectedRows = await todoService.deleteTodoByIdOrNameAndUserId(req.params.idOrName, req.user.id);
     if (numAffectedRows > 0) {
-      res.json(success(`Todo item with ID or name '${req.params.idOrName}' deleted`));
+      res.json({ message: `Todo item with ID or name '${req.params.idOrName}' deleted` });
     } else {
-      res.status(404).json(fail(`Todo item with ID or name '${req.params.idOrName}' not found`));
+      res.status(404).json({ message: `Todo item with ID or name '${req.params.idOrName}' not found` });
     }
   } catch (err) {
     console.error(err);
-    res.status(500).json(fail('Error deleting Todo item'));
+    res.status(500).json({ message: 'Error deleting Todo item' });
   }
 });
 
 module.exports = router;
-
