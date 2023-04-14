@@ -4,11 +4,6 @@ module.exports = (sequelize, Sequelize) => {
       type: Sequelize.DataTypes.STRING,
       allowNull: false,
     },
-    
-    userId: {
-      type: Sequelize.DataTypes.INTEGER,
-      allowNull: false,
-    },
   },
   {
     timestamps: false,
@@ -16,9 +11,9 @@ module.exports = (sequelize, Sequelize) => {
   );
 
   Todo.associate = function (models) {
-    Todo.belongsTo(models.Category, { foreignKey: { allowNull: false }, onDelete: 'CASCADE' });
-    Todo.belongsTo(models.User, { foreignKey: { allowNull: false }, onDelete: 'CASCADE' });
+    Todo.belongsTo(models.Category, { foreignKey: { allowNull: false }, onDelete: 'CASCADE' })
   };
 
   return Todo;
 };
+
