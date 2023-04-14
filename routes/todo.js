@@ -2,7 +2,8 @@ var express = require('express');
 var jsend = require('jsend');
 var router = express.Router();
 const { Todo, Category } = require('../models');
-var jwt = require('jsonwebtoken')
+var jwt = require('jsonwebtoken');
+var TodoService = require('../services/TodoService');
 
 router.use(jsend.middleware);
 
@@ -28,7 +29,7 @@ function verifyToken(req, res, next) {
 // GET all Todo items
 router.get('/', verifyToken, async (req, res) => {
   try {
-    const todos = await todoService.getAllTodosByUserId(req.user.id);
+    const todos = await TodoService.getAllTodosByUserId(req.user.id);
     res.json(todos);
   } catch (err) {
     console.error(err);
@@ -39,7 +40,7 @@ router.get('/', verifyToken, async (req, res) => {
 // POST a new Todo item
 router.post('/', verifyToken, async (req, res) => {
   try {
-    const todo = await todoService.createTodoByUserId(req.body, req.user.id);
+    const todo = await TodoService.createTodoByUserId(req.body, req.user.id);
     res.json(todo);
   } catch (err) {
     console.error(err);
@@ -54,11 +55,11 @@ router.put('/:idOrName', verifyToken, async (req, res) => {
     if (!id && !name && !newName) {
       return res.status(400).json({ message: 'Provide the id, name or the newName' });
     }
-    const todo = await todoService.getTodoByIdOrNameAndUserId(req.params.idOrName, req.user.id);
+    const todo = await TodoService.getTodoByIdOrNameAndUserId(req.params.idOrName, req.user.id);
     if (!todo) {
       return res.status(404).json({ message: `Todo item with ID or name '${req.params.idOrName}' not found` });
     }
-    const updatedTodo = await todoService.updateTodoByIdOrNameAndUserId(req.params.idOrName, req.body, req.user.id);
+    const updatedTodo = await TodoService.updateTodoByIdOrNameAndUserId(req.params.idOrName, req.body, req.user.id);
     res.json(updatedTodo);
   } catch (err) {
     console.error(err);
@@ -69,7 +70,7 @@ router.put('/:idOrName', verifyToken, async (req, res) => {
 // DELETE an existing Todo item by ID or name
 router.delete('/:idOrName', verifyToken, async (req, res) => {
   try {
-    const numAffectedRows = await todoService.deleteTodoByIdOrNameAndUserId(req.params.idOrName, req.user.id);
+    const numAffectedRows = await TodoService.deleteTodoByIdOrNameAndUserId(req.params.idOrName, req.user.id);
     if (numAffectedRows > 0) {
       res.json({ message: `Todo item with ID or name '${req.params.idOrName}' deleted` });
     } else {
