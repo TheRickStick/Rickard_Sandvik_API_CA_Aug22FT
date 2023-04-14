@@ -10,6 +10,14 @@ module.exports = (sequelize, Sequelize) => {
     timestamps: false,
   }
   );
+
+  Category.bulkCreate([
+    { name: 'Cleaning' },
+    { name: 'Working Out' },
+    { name: 'Grocery Shopping' },
+    { name: 'Meeting' },
+    { name: 'Travel Planning' }
+  ]);
+
   return Category;
 };
-
