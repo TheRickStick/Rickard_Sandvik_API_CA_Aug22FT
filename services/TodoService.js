@@ -8,7 +8,7 @@ async function getAllTodosByUserId(userId) {
   });
 }
 
-async function createTodoByUserId(todo, userId, token) {
+async function createTodoByUserId(todo, token) {
   console.log('Token:', token);
   console.log('Secret:', process.env.JWT_SECRET);
 
@@ -27,14 +27,27 @@ async function createTodoByUserId(todo, userId, token) {
 
 
 
-async function getTodoByIdOrNameAndUserId(idOrName, userId) {
-  return await Todo.findOne({
-    where: {
-      [Op.or]: [{ id: idOrName }, { name: idOrName }],
-      userId
+async function getTodoByIdOrNameAndUserId(idOrName, userId, token) {
+  console.log('Token:', token);
+  console.log('Secret:', process.env.JWT_SECRET);
+
+  try {
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+    if (decodedToken.id !== userId) {
+      throw new Error('Unauthorized user');
     }
-  });
+    return await Todo.findOne({
+      where: {
+        [Op.or]: [{ id: idOrName }, { name: idOrName }],
+        userId
+      }
+    });
+  } catch (err) {
+    console.error('JWT verification error:', err);
+    throw err;
+  }
 }
+
 
 async function updateTodoByIdOrNameAndUserId(idOrName, updates, userId) {
   const todo = await getTodoByIdOrNameAndUserId(idOrName, userId);

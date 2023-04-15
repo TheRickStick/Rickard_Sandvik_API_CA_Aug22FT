@@ -51,7 +51,7 @@ router.post('/', verifyToken, async (req, res) => {
   }
 });
 
-// GET all Todo items
+// GET  Todo items
 router.get('/', verifyToken, async (req, res) => {
   try {
     const todos = await TodoService.getAllTodosByUserId(req.user.id);
