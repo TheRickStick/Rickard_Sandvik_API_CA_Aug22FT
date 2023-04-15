@@ -4,6 +4,7 @@ var router = express.Router();
 const { Todo, Category } = require('../models');
 var jwt = require('jsonwebtoken');
 var TodoService = require('../services/TodoService');
+var CategoryService = require('../services/CategoryService');
 
 router.use(jsend.middleware);
 
@@ -40,7 +41,12 @@ router.get('/', verifyToken, async (req, res) => {
 // POST a new Todo item
 router.post('/', verifyToken, async (req, res) => {
   try {
-    const todo = await TodoService.createTodoByUserId(req.body, req.user.id);
+    const { category, ...todoData } = req.body;
+    let todo = await TodoService.createTodoByUserId(todoData, req.user.id);
+    if (category) {
+      const createdCategory = await CategoryService.createCategoryByTodoId(category, todo.id);
+      todo = { ...todo.toJSON(), category: createdCategory };
+    }
     res.json(todo);
   } catch (err) {
     console.error(err);
@@ -51,7 +57,7 @@ router.post('/', verifyToken, async (req, res) => {
 // PUT (update) an existing Todo item by ID or name
 router.put('/:idOrName', verifyToken, async (req, res) => {
   try {
-    const { id, name, newName } = req.body;
+    const { id, name, newName, category: newCategory } = req.body;
     if (!id && !name && !newName) {
       return res.status(400).json({ message: 'Provide the id, name or the newName' });
     }
@@ -59,7 +65,12 @@ router.put('/:idOrName', verifyToken, async (req, res) => {
     if (!todo) {
       return res.status(404).json({ message: `Todo item with ID or name '${req.params.idOrName}' not found` });
     }
-    const updatedTodo = await TodoService.updateTodoByIdOrNameAndUserId(req.params.idOrName, req.body, req.user.id);
+    const updates = { ...(newName && { name: newName }), ...(newCategory && { category: newCategory }) };
+    let updatedTodo = await TodoService.updateTodoByIdOrNameAndUserId(req.params.idOrName, updates, req.user.id);
+    if (newCategory) {
+      const createdCategory = await CategoryService.createCategoryByTodoId(newCategory, todo.id);
+      updatedTodo = { ...updatedTodo.toJSON(), category: createdCategory };
+    }
     res.json(updatedTodo);
   } catch (err) {
     console.error(err);
@@ -70,11 +81,28 @@ router.put('/:idOrName', verifyToken, async (req, res) => {
 // DELETE an existing Todo item by ID or name
 router.delete('/:idOrName', verifyToken, async (req, res) => {
   try {
-    const numAffectedRows = await TodoService.deleteTodoByIdOrNameAndUserId(req.params.idOrName, req.user.id);
-    if (numAffectedRows > 0) {
-      res.json({ message: `Todo item with ID or name '${req.params.idOrName}' deleted` });
+    const { idOrName } = req.params;
+    const { deleteByCategory } = req.query;
+    if (deleteByCategory) {
+      // Delete the todo by category
+      const category = await Category.findOne({ where: { name: idOrName } });
+      if (!category) {
+        return res.status(404).json({ message: `Category with name '${idOrName}' not found` });
+      }
+      const numAffectedRows = await Todo.destroy({ where: { categoryId: category.id, userId: req.user.id } });
+      if (numAffectedRows > 0) {
+        res.json({ message: `Todos in category '${idOrName}' deleted` });
+      } else {
+        res.status(404).json({ message: `No todos found in category '${idOrName}'` });
+      }
     } else {
-      res.status(404).json({ message: `Todo item with ID or name '${req.params.idOrName}' not found` });
+      // Delete the todo by id or name
+      const numAffectedRows = await TodoService.deleteTodoByIdOrNameAndUserId(idOrName, req.user.id);
+      if (numAffectedRows > 0) {
+        res.json({ message: `Todo item with ID or name '${idOrName}' deleted` });
+      } else {
+        res.status(404).json({ message: `Todo item with ID or name '${idOrName}' not found` });
+      }
     }
   } catch (err) {
     console.error(err);
