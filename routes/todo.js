@@ -23,9 +23,13 @@ function verifyToken(req, res, next) {
     next();
   } catch (err) {
     console.error(err);
-    res.status(400).json({ message: 'Invalid svin.' });
+    if (err instanceof jwt.JsonWebTokenError) {
+      return res.status(401).json({ message: 'Invalid token.' });
+    }
+    res.status(400).json({ message: 'Invalid request.' });
   }
 }
+
 
 // GET all Todo items
 router.get('/', verifyToken, async (req, res) => {
@@ -42,7 +46,7 @@ router.get('/', verifyToken, async (req, res) => {
 router.post('/', verifyToken, async (req, res) => {
   try {
     const { category, ...todoData } = req.body;
-    let todo = await TodoService.createTodoByUserId(todoData, req.user.id);
+    let todo = await TodoService.createTodoByUserId(todoData, req.user.id, req.token); // pass req.token here
     if (category) {
       const createdCategory = await CategoryService.createCategoryByTodoId(category, todo.id);
       todo = { ...todo.toJSON(), category: createdCategory };

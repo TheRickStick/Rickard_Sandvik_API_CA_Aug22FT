@@ -1,4 +1,6 @@
 const { Todo } = require('../models');
+const jwt = require('jsonwebtoken');
+
 
 async function getAllTodosByUserId(userId) {
   return await Todo.findAll({
@@ -6,10 +8,15 @@ async function getAllTodosByUserId(userId) {
   });
 }
 
-async function createTodoByUserId(todo, userId) {
+async function createTodoByUserId(todo, userId, token) {
+  const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+  if (decodedToken.id !== userId) {
+    throw new Error('Unauthorized user');
+  }
   todo.userId = userId;
   return await Todo.create(todo);
 }
+
 
 async function getTodoByIdOrNameAndUserId(idOrName, userId) {
   return await Todo.findOne({
