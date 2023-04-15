@@ -9,13 +9,22 @@ async function getAllTodosByUserId(userId) {
 }
 
 async function createTodoByUserId(todo, userId, token) {
-  const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
-  if (decodedToken.id !== userId) {
-    throw new Error('Unauthorized user');
+  console.log('Token:', token);
+  console.log('Secret:', process.env.JWT_SECRET);
+
+  try {
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+    if (decodedToken.id !== userId) {
+      throw new Error('Unauthorized user');
+    }
+    todo.userId = userId;
+    return await Todo.create(todo);
+  } catch (err) {
+    console.error('JWT verification error:', err);
+    throw err;
   }
-  todo.userId = userId;
-  return await Todo.create(todo);
 }
+
 
 
 async function getTodoByIdOrNameAndUserId(idOrName, userId) {

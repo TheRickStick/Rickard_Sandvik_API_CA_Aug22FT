@@ -10,51 +10,55 @@ router.use(jsend.middleware);
 
 const { Op } = require('sequelize');
 
-
 // middleware to verify token
 function verifyToken(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) {
-    return res.status(401).json({ message: 'Access denied. No token provided.' });
-  }
-  try {
-    const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decodedToken;
-    next();
-  } catch (err) {
-    console.error(err);
-    if (err instanceof jwt.JsonWebTokenError) {
-      return res.status(401).json({ message: 'Invalid token.' });
+    // Use res.jsend.fail() instead of res.fail()
+    res.jsend.fail(401, 'Access denied. No token provided.');
+  } else {
+    try {
+      const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = decodedToken;
+      req.token = token; // Store the token in the request object
+      next();
+    } catch (err) {
+      console.error(err);
+      if (err instanceof jwt.JsonWebTokenError) {
+        res.jsend.fail(401, 'Invalid token.');
+      } else {
+        res.jsend.fail(400, 'Invalid request.');
+      }
     }
-    res.status(400).json({ message: 'Invalid request.' });
   }
 }
 
 
-// GET all Todo items
-router.get('/', verifyToken, async (req, res) => {
-  try {
-    const todos = await TodoService.getAllTodosByUserId(req.user.id);
-    res.json(todos);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Error retrieving Todo items' });
-  }
-});
 
 // POST a new Todo item
 router.post('/', verifyToken, async (req, res) => {
   try {
     const { category, ...todoData } = req.body;
-    let todo = await TodoService.createTodoByUserId(todoData, req.user.id, req.token); // pass req.token here
+    let todo = await TodoService.createTodoByUserId(todoData, req.user.id, req.token); 
     if (category) {
       const createdCategory = await CategoryService.createCategoryByTodoId(category, todo.id);
       todo = { ...todo.toJSON(), category: createdCategory };
     }
-    res.json(todo);
+    res.jsend.success(todo);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Error creating Todo item' });
+    res.jsend.fail(500, 'Error creating Todo item');
+  }
+});
+
+// GET all Todo items
+router.get('/', verifyToken, async (req, res) => {
+  try {
+    const todos = await TodoService.getAllTodosByUserId(req.user.id);
+    res.jsend.success(todos);
+  } catch (err) {
+    console.error(err);
+    res.jsend.fail(500, 'Error retrieving Todo items');
   }
 });
 
@@ -63,22 +67,22 @@ router.put('/:idOrName', verifyToken, async (req, res) => {
   try {
     const { id, name, newName, category: newCategory } = req.body;
     if (!id && !name && !newName) {
-      return res.status(400).json({ message: 'Provide the id, name or the newName' });
+      // Use res.jsend.fail() instead of res.fail()
+      res.jsend.fail(400, 'Provide the id, name or the newName');
+    } else {
+      const todo = await TodoService.getTodoByIdOrNameAndUserId(req.params.idOrName, req.user.id);
+      if (!todo) {
+        res.jsend.fail(404, `Todo item with ID or name '${req.params.idOrName}' not found`);
+      } else {
+        const updates = { ...(newName && { name: newName }), ...(newCategory && { categoryId: newCategory }) };
+        await TodoService.updateTodoById(todo.id, updates);
+        const updatedTodo = await TodoService.getTodoById(todo.id);
+        res.jsend.success(updatedTodo);
+      }
     }
-    const todo = await TodoService.getTodoByIdOrNameAndUserId(req.params.idOrName, req.user.id);
-    if (!todo) {
-      return res.status(404).json({ message: `Todo item with ID or name '${req.params.idOrName}' not found` });
-    }
-    const updates = { ...(newName && { name: newName }), ...(newCategory && { category: newCategory }) };
-    let updatedTodo = await TodoService.updateTodoByIdOrNameAndUserId(req.params.idOrName, updates, req.user.id);
-    if (newCategory) {
-      const createdCategory = await CategoryService.createCategoryByTodoId(newCategory, todo.id);
-      updatedTodo = { ...updatedTodo.toJSON(), category: createdCategory };
-    }
-    res.json(updatedTodo);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Error updating Todo item' });
+    res.jsend.fail(500, 'Error updating Todo item');
   }
 });
 
@@ -91,26 +95,27 @@ router.delete('/:idOrName', verifyToken, async (req, res) => {
       // Delete the todo by category
       const category = await Category.findOne({ where: { name: idOrName } });
       if (!category) {
-        return res.status(404).json({ message: `Category with name '${idOrName}' not found` });
-      }
-      const numAffectedRows = await Todo.destroy({ where: { categoryId: category.id, userId: req.user.id } });
-      if (numAffectedRows > 0) {
-        res.json({ message: `Todos in category '${idOrName}' deleted` });
+        res.jsend.fail(404, `Category with name '${idOrName}' not found`);
       } else {
-        res.status(404).json({ message: `No todos found in category '${idOrName}'` });
+        const numAffectedRows = await Todo.destroy({ where: { categoryId: category.id, userId: req.user.id } });
+        if (numAffectedRows > 0) {
+          res.jsend.success(`Todos in category '${idOrName}' deleted`);
+        } else {
+          res.jsend.fail(404, `No todos found in category '${idOrName}'`);
+        }
       }
     } else {
       // Delete the todo by id or name
       const numAffectedRows = await TodoService.deleteTodoByIdOrNameAndUserId(idOrName, req.user.id);
       if (numAffectedRows > 0) {
-        res.json({ message: `Todo item with ID or name '${idOrName}' deleted` });
+        res.jsend.success(`Todo item with ID or name '${idOrName}' deleted`);
       } else {
-        res.status(404).json({ message: `Todo item with ID or name '${idOrName}' not found` });
+        res.jsend.fail(404, `Todo item with ID or name '${idOrName}' not found`);
       }
     }
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Error deleting Todo item' });
+    res.jsend.fail(500, 'Error deleting Todo item');
   }
 });
 
