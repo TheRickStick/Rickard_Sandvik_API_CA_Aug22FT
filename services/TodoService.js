@@ -8,7 +8,7 @@ async function getAllTodosByUserId(userId) {
   });
 }
 
-async function createTodoByUserId(todo, token) {
+async function createTodoByUserId(todo, userId,  token) {
   console.log('Token:', token);
   console.log('Secret:', process.env.JWT_SECRET);
 

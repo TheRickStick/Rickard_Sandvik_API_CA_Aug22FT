@@ -62,7 +62,7 @@ router.get('/', verifyToken, async (req, res) => {
   }
 });
 
-// PUT (update) an existing Todo item by ID or name
+// PUT an existing Todo item by ID or name
 router.put('/:idOrName', verifyToken, async (req, res) => {
   try {
     const { id, name, newName, category: newCategory } = req.body;
