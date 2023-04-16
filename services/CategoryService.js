@@ -1,41 +1,81 @@
-const { Category } = require('../models');
+const { Todo } = require('../models');
+const jwt = require('jsonwebtoken');
 
-async function getAllCategories() {
-  return await Category.findAll();
-}
+const Op = require('sequelize').Op;
 
-async function createCategory(category) {
-  return await Category.create(category);
-}
-
-async function getCategoryByIdOrName(idOrName) {
-  return await Category.findOne({
-    where: {
-      [Op.or]: [{ id: idOrName }, { name: idOrName }],
-    },
+async function getAllTodosByUserId(userId) {
+  return await Todo.findAll({
+    where: { userId }
   });
 }
 
-async function updateCategoryByIdOrName(idOrName, updates) {
-  const category = await getCategoryByIdOrName(idOrName);
-  if (!category) {
-    return null;
+async function createTodoByToken(todo, token) {
+  try {
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+    todo.UserId = decodedToken.id;
+    const res = await Todo.create(todo);
+ 
+  } catch (err) {
+  
+    throw err;
   }
-  return await category.update(updates);
 }
 
-async function deleteCategoryByIdOrName(idOrName) {
-  const category = await getCategoryByIdOrName(idOrName);
-  if (!category) {
-    return 0;
+async function getTodoByIdOrNameAndUserId(idOrName, token) {
+  try {
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+    return await Todo.findOne({
+      where: {
+        [Op.and]: [{ id: idOrName }, { UserId: decodedToken.id }]
+      }
+    });
+  } catch (err) {
+    console.error('JWT verification error:', err);
+    throw err;
   }
-  return await category.destroy();
+}
+
+async function updateTodoByIdOrNameAndUserId(idOrName, updates, token) {
+  try {
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+    const todo = await Todo.findOne({
+      where: {
+        [Op.and]: [{ id: idOrName }, { UserId: decodedToken.id }]
+      }
+    });
+    if (!todo) {
+      return null;
+    }
+    return await todo.update(updates);
+  } catch (err) {
+    console.error('JWT verification error:', err);
+    throw err;
+  }
+}
+
+async function deleteTodoByIdOrNameAndUserId(idOrName, token) {
+  try {
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+    const todo = await Todo.findOne({
+      where: {
+        [Op.and]: [{ id: idOrName }, { UserId: decodedToken.id }]
+      }
+    });
+    if (!todo) {
+      return 0;
+    }
+    return await todo.destroy();
+  } catch (err) {
+    console.error('JWT verification error:', err);
+    throw err;
+  }
 }
 
 module.exports = {
-  getAllCategories,
-  createCategory,
-  getCategoryByIdOrName,
-  updateCategoryByIdOrName,
-  deleteCategoryByIdOrName,
+  getAllTodosByUserId,
+  createTodoByToken,
+  getTodoByIdOrNameAndUserId,
+  updateTodoByIdOrNameAndUserId,
+  deleteTodoByIdOrNameAndUserId
 };
+

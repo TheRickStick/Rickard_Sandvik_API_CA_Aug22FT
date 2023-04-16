@@ -23,12 +23,13 @@ describe("testing-guest-routes", () => {
     const { body } = await request(app).post("/login").send(credentials);
     expect(body).toHaveProperty("data");
     expect(body.data).toHaveProperty("token");
-    token = body.data.token
-    console.log(token)
+    token = body.data.token;
+    console.log(token);
   });
 
   test("GET / - success", async () => {
-    const { body } = await request(app).get("/").set("Authorization", `Bearer ${token}`);
+    const body  = await request(app).get("/todo").set("Authorization", `Bearer ${token}`);
+    console.log(body);
     expect(body).toHaveProperty("status", "success");
     expect(body).toHaveProperty("data");
     expect(body.data).toBeInstanceOf(Array);

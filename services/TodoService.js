@@ -1,6 +1,7 @@
 const { Todo } = require('../models');
 const jwt = require('jsonwebtoken');
 
+const Op = require('sequelize').Op;
 
 async function getAllTodosByUserId(userId) {
   return await Todo.findAll({
@@ -11,29 +12,32 @@ async function getAllTodosByUserId(userId) {
 async function createTodoByToken(todo, token) {
   try {
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
-    todo.userId = decodedToken.id;
-    return await Todo.create(todo);
+    todo.UserId = decodedToken.id;
+    const res = await Todo.create(todo);
+ 
   } catch (err) {
-    console.error('JWT verification error:', err);
+  
     throw err;
   }
 }
 
-
-
-async function getTodoByIdOrNameAndUserId(idOrName, userId, token) {
+async function getTodoByIdOrNameAndUserId(idOrName, token) {
   console.log('Token:', token);
   console.log('Secret:', process.env.JWT_SECRET);
 
+  console.log(idOrName);
   try {
+
+
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
-    if (decodedToken.id !== userId) {
+    console.log('idcheck');
+    console.log('ID: ' + decodedToken.id );
+  /*  if (decodedToken.id !== userId) {
       throw new Error('Unauthorized user');
-    }
+    }*/
     return await Todo.findOne({
       where: {
-        [Op.or]: [{ id: idOrName }, { name: idOrName }],
-        userId
+        [Op.or]: [{ id: idOrName }, { name: idOrName }]
       }
     });
   } catch (err) {
@@ -41,7 +45,6 @@ async function getTodoByIdOrNameAndUserId(idOrName, userId, token) {
     throw err;
   }
 }
-
 
 async function updateTodoByIdOrNameAndUserId(idOrName, updates, userId) {
   const todo = await getTodoByIdOrNameAndUserId(idOrName, userId);
@@ -51,8 +54,9 @@ async function updateTodoByIdOrNameAndUserId(idOrName, updates, userId) {
   return await todo.update(updates);
 }
 
-async function deleteTodoByIdOrNameAndUserId(idOrName, userId) {
-  const todo = await getTodoByIdOrNameAndUserId(idOrName, userId);
+async function deleteTodoByIdOrNameAndUserId(idOrName, token) {
+  console.log('deleting: ' + idOrName );
+  const todo = await getTodoByIdOrNameAndUserId(idOrName, token);
   if (!todo) {
     return 0;
   }

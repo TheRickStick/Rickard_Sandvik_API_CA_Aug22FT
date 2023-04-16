@@ -8,6 +8,7 @@ var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var authRouter = require('./routes/auth');
 var todoRouter = require('./routes/todo');
+var categoryRouter = require('./routes/category')
 require('dotenv').config();
 var db = require('./models');
 db.sequelize.sync({ force: false });
@@ -29,6 +30,7 @@ app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/', authRouter);
 app.use('/todo', todoRouter);
+app.use('/categories', categoryRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
@@ -36,6 +38,7 @@ app.use(function (req, res, next) {
 });
 
 // error handler
+
 app.use(function (err, req, res, next) {
   // set locals, only providing error in development
   res.locals.message = err.message;
