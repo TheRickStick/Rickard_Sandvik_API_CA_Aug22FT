@@ -37,6 +37,13 @@ describe("testing-guest-routes", () => {
     console.log(token)
   });
 
+  test("GET / - success", async () => {
+    const { body } = await request(app).get("/").set("Authorization", `Bearer ${token}`);
+    expect(body).toHaveProperty("status", "success");
+    expect(body).toHaveProperty("data");
+    expect(body.data).toBeInstanceOf(Array);
+  });
+
 
   test("DELETE / - success", async () => {
     const credentials = {

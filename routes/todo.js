@@ -3,8 +3,8 @@ var jsend = require('jsend');
 var router = express.Router();
 const { Todo, Category } = require('../models');
 var jwt = require('jsonwebtoken');
-var TodoService = require('../services/TodoService');
-var CategoryService = require('../services/CategoryService');
+const TodoService = require('../services/todoService');
+//var CategoryService = require('../services/CategoryService');
 
 router.use(jsend.middleware);
 
@@ -14,13 +14,12 @@ const { Op } = require('sequelize');
 function verifyToken(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) {
-    // Use res.jsend.fail() instead of res.fail()
     res.jsend.fail(401, 'Access denied. No token provided.');
   } else {
     try {
       const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
       req.user = decodedToken;
-      req.token = token; // Store the token in the request object
+      req.token = token;
       next();
     } catch (err) {
       console.error(err);
@@ -37,14 +36,14 @@ function verifyToken(req, res, next) {
 
 // POST a new Todo item
 router.post('/', verifyToken, async (req, res) => {
+  const { name, categoryId } = req.body;
+  if (!name || !categoryId) {
+    res.jsend.fail(400, 'Please provide the name and categoryId of the todo item');
+    return;
+  }
   try {
-    const { category, ...todoData } = req.body;
-    let todo = await TodoService.createTodoByUserId(todoData, req.user.id, req.token); 
-    if (category) {
-      const createdCategory = await CategoryService.createCategoryByTodoId(category, todo.id);
-      todo = { ...todo.toJSON(), category: createdCategory };
-    }
-    res.jsend.success(todo);
+    const result = await TodoService.createTodoByToken({ name, categoryId }, req.token);
+    res.jsend.success({ result });
   } catch (err) {
     console.error(err);
     res.jsend.fail(500, 'Error creating Todo item');
@@ -67,7 +66,6 @@ router.put('/:idOrName', verifyToken, async (req, res) => {
   try {
     const { id, name, newName, category: newCategory } = req.body;
     if (!id && !name && !newName) {
-      // Use res.jsend.fail() instead of res.fail()
       res.jsend.fail(400, 'Provide the id, name or the newName');
     } else {
       const todo = await TodoService.getTodoByIdOrNameAndUserId(req.params.idOrName, req.user.id);

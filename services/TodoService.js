@@ -8,16 +8,10 @@ async function getAllTodosByUserId(userId) {
   });
 }
 
-async function createTodoByUserId(todo, userId,  token) {
-  console.log('Token:', token);
-  console.log('Secret:', process.env.JWT_SECRET);
-
+async function createTodoByToken(todo, token) {
   try {
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
-    if (decodedToken.id !== userId) {
-      throw new Error('Unauthorized user');
-    }
-    todo.userId = userId;
+    todo.userId = decodedToken.id;
     return await Todo.create(todo);
   } catch (err) {
     console.error('JWT verification error:', err);
@@ -67,7 +61,7 @@ async function deleteTodoByIdOrNameAndUserId(idOrName, userId) {
 
 module.exports = {
   getAllTodosByUserId,
-  createTodoByUserId,
+  createTodoByToken,
   getTodoByIdOrNameAndUserId,
   updateTodoByIdOrNameAndUserId,
   deleteTodoByIdOrNameAndUserId
